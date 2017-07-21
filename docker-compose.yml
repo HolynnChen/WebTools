@@ -1,0 +1,8 @@
+version: '2.1'
+
+services:
+  webtools:
+    image: webtools
+    build:
+      context: .\WebTools
+      dockerfile: Dockerfile
