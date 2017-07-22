@@ -34,3 +34,4 @@ c:\users\qq854\documents\visual studio 2017\Projects\WebTools\WebTools\obj\Debug
 c:\users\qq854\documents\visual studio 2017\Projects\WebTools\WebTools\obj\Debug\WebTools.csprojResolveAssemblyReference.cache
 C:\Users\qq854\documents\visual studio 2017\Projects\WebTools\WebTools\bin\WebDriver.dll
 C:\Users\qq854\documents\visual studio 2017\Projects\WebTools\WebTools\bin\WebDriver.xml
+C:\Users\qq854\Documents\Visual Studio 2017\Projects\WebTools\WebTools\obj\Debug\WebTools.csproj.ResolveComReference.cache

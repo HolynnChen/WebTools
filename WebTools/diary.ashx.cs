@@ -11,6 +11,7 @@ using System.Threading;
 using System.Text.RegularExpressions;
 using System.Net;
 using System.Text;
+using Microsoft.Office.Interop.Excel;
 
 namespace WebTools
 {
@@ -47,25 +48,6 @@ namespace WebTools
             {
                 switch (context.Request["action"].ToString())
                 {
-                    case "readystatus"://查询进度_废弃不用
-                        test.log("进度");
-                        context.Response.ContentType = "application/x-javascript";
-                        if (context.Session["loading"] != null && (bool)context.Session["loading"] == true) {
-                            if (context.Session["resopn_text"] == null) context.Session["resopn_text"] = "";
-                            string respon_text = (string)context.Session["resopn_text"];
-                            do {
-                                if (respon_text != (string)context.Session["resopn_text"]) {
-                                    respon_text = (string)context.Session["resopn_text"];
-                                    context.Response.ClearContent();
-                                    context.Response.Write(respon_text);
-                                    context.Response.Flush();
-                                }
-                            } while (respon_text!="readystatus:Finish");
-                            context.Response.End();
-                        }
-                        context.Response.End();
-                        break;
-
                     case "search_diary":
                         //判断参数是否存在
                         context.Response.ContentType = "application/x-javascript";
@@ -138,13 +120,37 @@ namespace WebTools
                             bool de = context.Request["delcontent"] != null && context.Request["delcontent"] == "1" ? true : false;
                             bool dec = context.Request["detail"] != null && context.Request["detail"] == "1" ? true : false;
                             arc_node[] jjk=search_arc_diy(ref context,sk,sw,sn);
+                            //初始化输入
+                            bool dc_put= context.Request["dc_put"] != null && context.Request["dc_put"] == "1" ? true : false;
+                            if (dc_put) {
+                                if (context.Session["excel_app"]!=null) { context.Response.Write("output now");context.Response.End();return; };
+                                string[] k = {"姓名","ID","节点","标题" };
+                                if (dec) k=(new string[] { "年级", "组别" }).Concat(k).ToArray();
+                                if (!de) k=k.Concat(new string[] { "内容" }).ToArray();
+                                excel_start(ref context,k);
+                            }//初始化表头完毕
+                            var ipoi = 0;
                             foreach (var i in jjk) {
-                                string ppo =  i.name + ";" + i.id + ";" + i.node_name.Trim() + ";" + LZString.LZString.compressToBase64(i.title);
-                                if (dec) { var iu = get_detail(i.name); ppo = iu[0] + ";" + iu[1] + ";" + ppo; }
-                                if (!de) ppo += ";"+LZString.LZString.compressToBase64(get_content(ref context, i.id, true, "hope_article_content"));
-                                context.Response.Write("success|"+ppo);
-                                context.Response.FlushAsync();
+                                if (!dc_put)
+                                {
+                                    string ppo = i.name + ";" + i.id + ";" + i.node_name.Trim() + ";" + LZString.LZString.compressToBase64(i.title);
+                                    if (dec) { var iu = get_detail(i.name); ppo = iu[0] + ";" + iu[1] + ";" + ppo; }
+                                    if (!de) ppo += ";" + LZString.LZString.compressToBase64(get_content(ref context, i.id, true, "hope_article_content"))+"-";
+                                    context.Response.Write("success|" + ppo);
+                                    context.Response.FlushAsync();
+                                }
+                                else {
+                                    string[] ppo = { i.name, i.id, i.node_name.Trim(), i.title };
+                                    if (dec) { var iu = get_detail(i.name); ppo = (new string[] { iu[0], iu[1] }).Concat(ppo).ToArray(); }
+                                    if (!de) ppo=ppo.Concat(new string[] { get_content(ref context, i.id, true, "hope_article_content") }).ToArray();
+                                    excel_input(ref context,ppo);
+                                    ipoi++;
+                                    context.Response.Write("|导出进度:" + ipoi.ToString() + "/" + jjk.Length.ToString()+"|");
+                                    context.Response.FlushAsync();
+
+                                }
                             }
+                            if (dc_put) { string uri = excel_finish(ref context); context.Response.Write("success|" + uri); };
                             if (jjk.Length == 0) {
                                 context.Response.Write( "no_arc");
                             }
@@ -297,7 +303,7 @@ namespace WebTools
                 {
                     string[] ms = get_detail(k.name);
                     string p = "|" + ms[0] + ";" + ms[1] + ";" + k.name + ";" + k.id + ";" + LZString.LZString.compressToBase64(k.title);
-                    if (!inc) p += ";" + LZString.LZString.compressToBase64(get_content(ref context, k.id, isu));
+                    if (!inc) p += ";" + LZString.LZString.compressToBase64(get_content(ref context, k.id, isu))+"-";
                     output += p;
                     if (!icu)
                     {
@@ -312,7 +318,7 @@ namespace WebTools
                 foreach (var k in reo)
                 {
                     string p = "|" + k.name + ";" + k.id + ";" + LZString.LZString.compressToBase64(k.title);
-                    if (!inc) p += ";" + LZString.LZString.compressToBase64(get_content(ref context, k.id, isu));
+                    if (!inc) p += ";" + LZString.LZString.compressToBase64(get_content(ref context, k.id, isu))+"-";
                     output += p;
                     if (!icu)
                     {
@@ -343,7 +349,7 @@ namespace WebTools
                 return;
             };
             string output = (string)js.ExecuteScript("if(document.getElementsByClassName('contID').length>1){return document.getElementsByClassName('contID')[1].innerText+'|!|'+document.getElementById('repList_lnkNodeName_0').innerText+'|!|'+document.getElementById('repList_lnkTitle_0').innerText+'|!|'+document.getElementById('repList_lnkInputer_0').innerText;}else{return 'null'};");
-            if (!delcontent) output += "|!|"+LZString.LZString.compressToBase64( get_content(ref context, output.Split(new string[] { "|!|" }, StringSplitOptions.RemoveEmptyEntries)[0],true ,"hope_article_content"));
+            if (!delcontent) output += "|!|"+LZString.LZString.compressToBase64( get_content(ref context, output.Split(new string[] { "|!|" }, StringSplitOptions.RemoveEmptyEntries)[0],true ,"hope_article_content"))+"-";
             context.Session["wb"] = web;
             context.Response.Write(output);
             context.Response.End();
@@ -357,7 +363,7 @@ namespace WebTools
             var old = web.PageSource;
             js.ExecuteScript("document.getElementById('ddlSearchField').value='"+io[searchway]+"';document.getElementById('txtSearchKey').value='" + searchkey + "';document.getElementById('btnSearch').click();");
             Thread.Sleep(100);
-            do { System.Windows.Forms.Application.DoEvents(); } while (old == web.PageSource&& web.FindElement(By.Id("divTip"))!=null);
+            do { System.Windows.Forms.Application.DoEvents(); } while (old == web.PageSource|| web.FindElement(By.Id("divTip"))==null);
             if (web.FindElement(By.Id("divTip")).Text == "此节点下或当前查询条件无任何记录！")
             {
                 context.Session["wb"] = web;
@@ -387,7 +393,7 @@ namespace WebTools
                     old = web.PageSource;
                     js.ExecuteScript("var o=document.getElementsByClassName('paginator')[1].innerText;__doPostBack('hp_paginator',String(Number(o.substring(o.indexOf('第')+1,o.indexOf('/')))+1));");
                     Thread.Sleep(100);
-                    do { System.Windows.Forms.Application.DoEvents(); } while (old == web.PageSource && web.FindElement(By.Id("divTip")) != null);
+                    do { System.Windows.Forms.Application.DoEvents(); } while (old == web.PageSource || web.FindElement(By.Id("divTip")) == null);
                 }
             } while (output.Substring(0, 1) == "1");
             pio = cio.ToArray();
@@ -404,8 +410,43 @@ namespace WebTools
             js.ExecuteScript("while(document.readyState!='complete'){};");
         }
 
-        public void excle_start(ref HttpContext context) {
-
+        public void excel_start(ref HttpContext context,string[] frist) {
+            Microsoft.Office.Interop.Excel.Application appexcel = new Microsoft.Office.Interop.Excel.Application();
+            Workbook datasum = appexcel.Workbooks.Add(true);
+            datasum.Activate();
+            Worksheet sheet = datasum.Worksheets["Sheet1"];
+            for(var i = 1; i < frist.Length+1; i++)
+            {
+                sheet.Cells[1, i] = frist[i-1];
+            }
+            context.Session["excel_app"] = appexcel;
+            context.Session["excel_wb"] = datasum;
+            context.Session["excel_ws"] = sheet;
+            context.Session["excel_num"] = 1;
+        }
+        public void excel_input(ref HttpContext context, string[] input) {
+            Worksheet sheet = (Worksheet)context.Session["excel_ws"];
+            int a = (int)context.Session["excel_num"]+1;//下移
+            for (var i = 1; i < input.Length+1; i++) {
+                sheet.Cells[a, i] = input[i-1];
+            }
+            context.Session["excel_num"] = a;
+            context.Session["excel_ws"] = sheet;
+        }
+        public string excel_finish(ref HttpContext context) {
+            Workbook datasum = (Workbook)context.Session["excel_wb"];
+            string a = "统计表" + test.GetRandomString(6, true, true, true, false, "") + ".xlsx";
+            datasum.SaveCopyAs(@"C:\Users\qq854\Documents\visual studio 2017\Projects\WebTools\WebTools\" + a);
+            datasum.Close(false, null, null);
+            ((Application)context.Session["excel_app"]).Quit();
+            System.Runtime.InteropServices.Marshal.ReleaseComObject((Worksheet)context.Session["excel_ws"]);
+            System.Runtime.InteropServices.Marshal.ReleaseComObject(datasum);
+            //抛弃所有保存
+            context.Session["excel_app"] = null;
+            context.Session["excel_wb"] = null;
+            context.Session["excel_ws"] = null;
+            context.Session["excel_num"] = null;
+            return a;
         }
     }
 }

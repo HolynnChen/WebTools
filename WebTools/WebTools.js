@@ -1,4 +1,4 @@
-//全局调用，提供集成函数
+﻿//全局调用，提供集成函数
 var x='';
 //全局变量
 //解释：当数据包过长自动分包时
@@ -56,7 +56,7 @@ function search_diary(name, time, detail, outputtext, onebyone,delcontent,suc) {
 			suc('null')
 		} else {
 			var outputstring = new Array();
-			var oip = new Array();
+			var iop = new Array();
 			iop = data.split('|');
 			for (var i = 1; i < iop.length; i++) {
 				var ccip = new Array();
@@ -69,13 +69,13 @@ function search_diary(name, time, detail, outputtext, onebyone,delcontent,suc) {
 						name: ccip[2],
 						id: ccip[3],
 						title: LZString.decompressFromBase64(ccip[4].replace(/(success|false|fault)/,''))
-					};if(delcontent!='1'){var ss=LZString.decompressFromBase64(ccip[5]);if(ss!=""){outputstring[i - 1].content = ss}else{x = data;return}}
+					};if (delcontent != '1') {if(ccip[5].charAt(ccip[5].length-1)!='-'){x = data;return};var ss=LZString.decompressFromBase64(ccip[5].substring(0,ccip[5].length-1));if(ss!=""){outputstring[i - 1].content = ss}else{x = data;return}}
 				} else {
 					outputstring[i - 1] = {
 						name: ccip[0],
 						id: ccip[1],
 						title: LZString.decompressFromBase64(ccip[2].replace(/(success|false|fault)/,''))
-					};if(delcontent!='1'){var ss=LZString.decompressFromBase64(ccip[3]);if(ss!=""){outputstring[i - 1].content = ss}else{x = data;return}}
+					};if (delcontent != '1') {if(ccip[3].charAt(ccip[3].length-1)!='-'){x = data;return};var ss=LZString.decompressFromBase64(ccip[3].substring(0,ccip[3].length-1));if(ss!=""){outputstring[i - 1].content = ss}else{x = data;return}}
 				}
 			};
 			suc(outputstring)
@@ -89,26 +89,26 @@ function search_diary_times(name, time, detail, outputtext,onebyone,delcontent, 
 			fun('null')
 		} else {
 			var outputstring = new Array();
-			var oip = new Array();
+			var iop = new Array();
 			iop = data.split('|');
-			for (var i = 1; i < iop.length; i++) {
+			if(iop.length>1) {
 				var ccip = new Array();
 				ccip = iop[i].split(';');
 				var co = iop.length;
 				if (detail == '1') {
-					outputstring[i - 1] = {
+					outputstring= {
 						nianji: ccip[0],
 						zubie: ccip[1],
 						name: ccip[2],
 						id: ccip[3],
 						title: LZString.decompressFromBase64(ccip[4].replace(/(success|false|fault)/,''))
-					};if(delcontent!='1'){var ss=LZString.decompressFromBase64(ccip[5]);if(ss!=""){outputstring[i - 1].content = ss}else{x = data;return}}
+					};if (delcontent != '1') {if(ccip[5].charAt(ccip[5].length-1)!='-'){x = data;return};var ss=LZString.decompressFromBase64(ccip[5].substring(0,ccip[5].length-1));if(ss!=""){outputstring.content = ss}else{x = data;return}}
 				} else {
-					outputstring[i - 1] = {
+					outputstring= {
 						name: ccip[0],
 						id: ccip[1],
 						title: LZString.decompressFromBase64(ccip[2].replace(/(success|false|fault)/,''))
-					};{var ss=LZString.decompressFromBase64(ccip[3]);if(ss!=""){outputstring[i - 1].content = ss}else{x = data;return}}
+					};if (delcontent != '1') {if(ccip[3].charAt(ccip[3].length-1)!='-'){x = data;return};var ss=LZString.decompressFromBase64(ccip[3].substring(0,ccip[3].length-1));if(ss!=""){outputstring.content = ss}else{x = data;return}}
 				}
 			};
 			fun(outputstring)
@@ -116,36 +116,71 @@ function search_diary_times(name, time, detail, outputtext,onebyone,delcontent, 
 	},suc)
 }
 
-function search_arc_times(searchkey, searchway, searchnumber, delcontent, detail, fun, suc) {
-	getValueFrom_times('./diary.ashx?action=search_arc&searchkey=' + searchkey + '&searchway=' + searchway + '&searchnumber=' + searchnumber + "&delcontent=" + delcontent + "&detail=" + detail, (data) => {
+function search_arc_times(searchkey, searchway, searchnumber, delcontent, detail, dc_put, fun, suc) {
+	getValueFrom_times('./diary.ashx?action=search_arc&searchkey=' + searchkey + '&searchway=' + searchway + '&searchnumber=' + searchnumber + "&delcontent=" + delcontent + "&detail=" + detail + "&dc_put=" + dc_put, (data) => {
 		if (data == 'false' || data == 'fault' || data == '参数错误' || data == 'no_arc') {
 			fun('null')
 		} else {
-			var outputstring = new Array();
-			var oip = new Array();
-			iop = data.split('|');
-			for (var i = 1; i < iop.length; i++) {
-				var ccip = new Array();
-				ccip = iop[i].split(';');
-				var co = iop.length;
-				if (detail == '1') {
-					outputstring[i - 1] = {
-						nianji: ccip[0],
-            zubie: ccip[1],
-						name: ccip[2],
-						id: ccip[3],
-						node_name: ccip[4],
-            title: LZString.decompressFromBase64(ccip[5].replace(/(success|false|fault)/, ''))
-					};
-					if (delcontent != '1') {var ss=LZString.decompressFromBase64(ccip[6]);if(ss!=""){outputstring[i - 1].content = ss}else{x = data;return}}
+			if (dc_put == '1') {
+				var iop = new Array();
+				iop = data.split('|');
+				if (iop.length > 1) {
+					var outputstring = iop[1];
 				} else {
-					outputstring[i - 1] = {
-						name: ccip[0],
-						id: ccip[1],
-						node_name: ccip[2],
-						title: LZString.decompressFromBase64(ccip[3].replace(/(success|false|fault)/, ''))
-					};
-					if (delcontent != '1') {var ss=LZString.decompressFromBase64(ccip[4]);if(ss!=""){outputstring[i - 1].content = ss}else{x = data;return}}
+					outputstring = 'null'
+				}
+			} else {
+				var outputstring = new Array();
+				var iop = new Array();
+				iop = data.split('|');
+				if (iop.length > 1) {
+					var i = 1;
+					var ccip = new Array();
+					ccip = iop[i].split(';');
+					var co = iop.length;
+					if (detail == '1') {
+						outputstring = {
+							nianji: ccip[0],
+							zubie: ccip[1],
+							name: ccip[2],
+							id: ccip[3],
+							node_name: ccip[4],
+							title: LZString.decompressFromBase64(ccip[5].replace(/(success|false|fault)/, ''))
+						};
+						if (delcontent != '1') {
+							if (ccip[6].charAt(ccip[6].length - 1) != '-') {
+								x = data;
+								return
+							};
+							var ss = LZString.decompressFromBase64(ccip[6].substring(0, ccip[6].length - 1));
+							if (ss != "") {
+								outputstring.content = ss
+							} else {
+								x = data;
+								return
+							}
+						}
+					} else {
+						outputstring = {
+							name: ccip[0],
+							id: ccip[1],
+							node_name: ccip[2],
+							title: LZString.decompressFromBase64(ccip[3].replace(/(success|false|fault)/, ''))
+						};
+						if (delcontent != '1') {
+							if (ccip[4].charAt(ccip[4].length - 1) != '-') {
+								x = data;
+								return
+							};
+							var ss = LZString.decompressFromBase64(ccip[4].substring(0, ccip[4].length - 1));
+							if (ss != "") {
+								outputstring.content = ss
+							} else {
+								x = data;
+								return
+							}
+						}
+					}
 				}
 			};
 			fun(outputstring)

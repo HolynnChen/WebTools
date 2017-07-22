@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -15,8 +16,11 @@ namespace WebTools
     {
         protected void Application_Start(object sender, EventArgs e)
         {
-            test.log("程序启动");
-            ;
+            test.log("程序启动 at "+ System.Windows.Forms.Application.StartupPath);
+            test.stopNamedProcess("phantomjs");
+            test.stopNamedProcess("excel");
+
+
         }
     }
     public static class test {
@@ -37,6 +41,23 @@ namespace WebTools
             }
             return s;
         }
+        public static void stopNamedProcess(string name)
+        {
+            foreach (Process p in System.Diagnostics.Process.GetProcessesByName(name))
+            {
+                try
+                {
+                    p.Kill();
+                    p.WaitForExit();
+                }
+                catch (Exception exp)
+                {
+                    Console.WriteLine(exp.Message);
+                    System.Diagnostics.EventLog.WriteEntry("AlchemySearch:KillProcess", exp.Message, System.Diagnostics.EventLogEntryType.Error);
+                }
+            }
+        }
+
     }
 
     public class websearch {
